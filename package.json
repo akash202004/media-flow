@@ -1,0 +1,31 @@
+{
+  "name": "youtube",
+  "version": "1.0.0",
+  "description": "Connect creators and audiences worldwide with seamless streaming, personalized recommendations, and interactive features for an engaging experience",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
+  },
+  "keywords": [
+    "javascript",
+    "react",
+    "node.js",
+    "mongodb"
+  ],
+  "author": "Akash Laha",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.1.0",
+    "prettier": "^3.2.5"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.3.0",
+    "mongoose-aggregate-paginate-v2": "^1.0.7"
+  }
+}
