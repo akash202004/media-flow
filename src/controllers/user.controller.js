@@ -48,7 +48,7 @@ const registerUser = asyncHandler(async (req, res) => {
     if (!createUser) throw new ApiError(500, "Something went wrong while registering the user");
 
     return res.status(201).json(
-        new ApiResponse(200, createUser, "User register successfully");
+        new ApiResponse(200, createUser, "User register successfully")
     )
 })
 
