@@ -4,6 +4,7 @@ import { ApiError } from "../utils/ApiError.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken";
+import fs from "fs"
 
 const generateAccessAndRefreshTokens = async (userID) => {
     try {
@@ -216,6 +217,7 @@ const updateUserDetails = asyncHandler(async (req, res) => {
 })
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
+
     const avatarLocalPath = req.file?.path
     if (!avatarLocalPath) throw new ApiError(401, "Avatar Path is Missing");
 
@@ -231,6 +233,19 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         },
         { new: true }
     ).select("-password")
+
+    if (user.avatar !== avatar.url) {
+        try {
+            const oldAvatarFilename = user.avatar.split('/').pop();
+            const oldAvatarLocalPath = `upload/${oldAvatarFilename}`
+
+            if (fs.existsSync(oldAvatarLocalPath)) {
+                fs.unlinkSync(oldAvatarLocalPath)
+            }
+        } catch (error) {
+            ApiError(400, "Error while deleting the old Details")
+        }
+    }
 
     return res
         .status(200)
@@ -248,15 +263,37 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         req.file?._id,
         {
             $set: {
-                avatar: coverImage.url
+                coverImage: coverImage.url
             }
         },
         { new: true }
     ).select("-password")
+
+    if (user.coverImage !== coverImage.url) {
+        try {
+            const oldcoverImageFilename = user.coverImage.split('/').pop();
+            const oldcoverImageLocalPath = `upload/${oldcoverImageFilename}`
+
+            if (fs.existsSync(oldcoverImageLocalPath)) {
+                fs.unlinkSync(oldcoverImageLocalPath)
+            }
+        } catch (error) {
+            ApiError(400, "Error while deleting the old Details")
+        }
+    }
 
     return res
         .status(200)
         .json(new ApiResponse(200, user, "Cover Image Changed Succesfully"))
 })
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, updateUserDetails, updateUserAvatar, updateUserCoverImage }
+export {
+    registerUser,
+    loginUser,
+    logoutUser,
+    refreshAccessToken,
+    changeCurrentPassword,
+    updateUserDetails,
+    updateUserAvatar,
+    updateUserCoverImage
+}
