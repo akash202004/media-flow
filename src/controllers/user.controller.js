@@ -197,7 +197,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 
 })
 
-const updateUserDetails = asyncHandler(async (req, res) => {
+const updateAccountDetails = asyncHandler(async (req, res) => {
     const { fullName, email } = req.body
     if (!(fullName || email)) throw new ApiError(400, "All Fields are is Required");
 
@@ -215,6 +215,12 @@ const updateUserDetails = asyncHandler(async (req, res) => {
     return res
         .status(200)
         .json(ApiResponse(200, user, "Account Details Updated Successfully"))
+})
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+    return res
+        .status(200)
+        .json(new ApiResponse(200, req.user, "User fetched successfully"))
 })
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
@@ -405,7 +411,8 @@ export {
     logoutUser,
     refreshAccessToken,
     changeCurrentPassword,
-    updateUserDetails,
+    updateAccountDetails,
+    getCurrentUser,
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
