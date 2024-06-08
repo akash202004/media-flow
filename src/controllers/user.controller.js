@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js"
 import { ApiError } from "../utils/ApiError.js"
-import { uploadOnCloudinary } from "../utils/cloudinary.js"
+import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken";
 import fs from "fs"
@@ -31,7 +31,7 @@ const registerUser = asyncHandler(async (req, res) => {
     if (
         [fullName, email, password, username].some((fields) => fields?.trim() === "")
     ) {
-        throw new ApiError(400, "All fields are required")``
+        throw new ApiError(400, "All fields are required")
     }
 
     const existedUser = await User.findOne({
@@ -66,8 +66,14 @@ const registerUser = asyncHandler(async (req, res) => {
         username: username.toLowerCase(),
         email,
         fullName,
-        avatar: avatar.url,
-        coverImage: coverImage?.url || "",
+        avatar: {
+            public_id: avatar.public_id,
+            url: avatar.secure_url
+        },
+        coverImage: {
+            public_id: coverImage?.public_id || "",
+            url: coverImage?.secure_url || ""
+        },
         password,
     })
 
@@ -231,32 +237,47 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     const avatar = await uploadOnCloudinary(avatarLocalPath)
     if (!avatar?.url) throw new ApiError(401, "Error while uploading Avatar");
 
-    const user = await User.findByIdAndUpdate(
-        req.file?._id,
+    const user = await User.findById(req.user?._id).select("avatar");
+    const deleteOldAvatar = user.avatar.public_id;
+    if (!deleteOldAvatar) throw new ApiError(400, "Old Avatar is Missing");
+
+    const updateUser = await User.findByIdAndUpdate(
+        req.user?._id,
         {
             $set: {
-                avatar: avatar.url
+                avatar: {
+                    public_id: avatar.public_id,
+                    url: avatar.secure_url
+                }
             }
         },
         { new: true }
     ).select("-password")
 
-    if (user.avatar !== avatar.url) {
+    if (updateUser.avatar !== avatar.url) {
         try {
-            const oldAvatarFilename = user.avatar.split('/').pop();
+            const oldAvatarFilename = updateUser.avatar.split('/').pop();
             const oldAvatarLocalPath = `upload/${oldAvatarFilename}`
 
             if (fs.existsSync(oldAvatarLocalPath)) {
                 fs.unlinkSync(oldAvatarLocalPath)
             }
         } catch (error) {
-            ApiError(400, "Error while deleting the old Details")
+            new ApiError(400, "Error while deleting the old Details")
+        }
+    }
+
+    if (deleteOldAvatar) {
+        try {
+            await deleteFromCloudinary(deleteOldAvatar);
+        } catch (error) {
+            new ApiError(400, "Error while deleting the old Details in Cloudinary")
         }
     }
 
     return res
         .status(200)
-        .json(new ApiResponse(200, user, "Avatar Changed Succesfully"))
+        .json(new ApiResponse(200, updateUser, "Avatar Changed Succesfully"))
 })
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
@@ -266,32 +287,46 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
     if (!coverImage?.url) throw new ApiError(401, "Error while uploading coverImage");
 
-    const user = await User.findByIdAndUpdate(
-        req.file?._id,
+    const user = await User.findById(req.user?._id).select("coverImage");
+    const deleteOldCoverImage = user.coverImage?.public_id;
+
+    const updateUser = await User.findByIdAndUpdate(
+        req.user?._id,
         {
             $set: {
-                coverImage: coverImage.url
+                coverImage: {
+                    public_id: coverImage.public_id,
+                    url: coverImage.secure_url
+                }
             }
         },
         { new: true }
     ).select("-password")
 
-    if (user.coverImage !== coverImage.url) {
+    if (updateUser.coverImage !== coverImage.url) {
         try {
-            const oldcoverImageFilename = user.coverImage.split('/').pop();
+            const oldcoverImageFilename = updateUser.coverImage.split('/').pop();
             const oldcoverImageLocalPath = `upload/${oldcoverImageFilename}`
 
             if (fs.existsSync(oldcoverImageLocalPath)) {
                 fs.unlinkSync(oldcoverImageLocalPath)
             }
         } catch (error) {
-            ApiError(400, "Error while deleting the old Details")
+            new ApiError(400, "Error while deleting the old Details")
+        }
+    }
+
+    if (deleteOldCoverImage) {
+        try {
+            await deleteFromCloudinary(deleteOldCoverImage);
+        } catch (error) {
+            new ApiError(400, "Error while deleting the old Details in Cloudinary")
         }
     }
 
     return res
         .status(200)
-        .json(new ApiResponse(200, user, "Cover Image Changed Succesfully"))
+        .json(new ApiResponse(200, updateUser, "Cover Image Changed Succesfully"))
 })
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
@@ -325,7 +360,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 subscribersCount: {
                     $size: "$subscribers"
                 },
-                cahnnelsSubscribedToCount: {
+                channelsSubscribedToCount: {
                     $size: "$subscriberdTo"
                 },
                 isSubscribed: {
